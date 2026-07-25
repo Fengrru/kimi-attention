@@ -55,14 +55,14 @@ pip install -e ".[dev,flash,train]"
 ## Architecture
 
 <p align="center">
-  <img src="assets/overview.png" width="90%" alt="Kimi hybrid architecture overview">
+  <img src="assets/overview.png" width="65%" alt="Kimi hybrid architecture overview">
 </p>
 <p align="center"><em>Hybrid KDA-MHA Transformer with Attention Residuals across layers</em></p>
 
 ### Attention Residuals
 
 <p align="center">
-  <img src="assets/attnres.png" width="80%" alt="Attention Residuals">
+  <img src="assets/attnres.png" width="55%" alt="Attention Residuals">
 </p>
 <p align="center"><em>Attention Residuals — depth-wise dynamic weighting across previous layers</em></p>
 
