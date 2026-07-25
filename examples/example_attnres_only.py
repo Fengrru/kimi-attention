@@ -49,7 +49,7 @@ def main():
         nn.init.normal_(layer.weight, 0, 0.02)
     for mlp in mlp_layers:
         for fc in mlp:
-            if hasattr(fc, 'weight'):
+            if hasattr(fc, "weight"):
                 nn.init.normal_(fc.weight, 0, 0.02)
 
     # Step 4: Forward pass with AttnRes
@@ -113,8 +113,10 @@ def main():
     bytes_per_block = batch_size * seq_len * dim * 4  # FP32
     num_blocks = num_layers // layers_per_block
     logger.info(f"\nMemory analysis:")
-    logger.info(f"  Stored blocks: {num_blocks} x {bytes_per_block / 1024:.1f} KB = "
-                f"{num_blocks * bytes_per_block / 1024:.1f} KB")
+    logger.info(
+        f"  Stored blocks: {num_blocks} x {bytes_per_block / 1024:.1f} KB = "
+        f"{num_blocks * bytes_per_block / 1024:.1f} KB"
+    )
     logger.info(f"  Without AttnRes: would need full-layer cache")
     logger.info(f"  Savings: only {num_blocks}/{num_layers} layer outputs stored")
 

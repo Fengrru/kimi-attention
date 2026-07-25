@@ -62,8 +62,9 @@ def time_generate(model, input_ids, max_tokens, warmup=1, repeats=3):
 
 def main():
     parser = argparse.ArgumentParser(description="Benchmark Kimi Transformer")
-    parser.add_argument("--config", type=str, default="custom",
-                        choices=["1B", "7B", "48B", "custom"])
+    parser.add_argument(
+        "--config", type=str, default="custom", choices=["1B", "7B", "48B", "custom"]
+    )
     parser.add_argument("--dim", type=int, default=0)
     parser.add_argument("--num_layers", type=int, default=0)
     parser.add_argument("--num_heads", type=int, default=0)
@@ -73,7 +74,9 @@ def main():
     parser.add_argument("--seq_len", type=int, default=2048)
     parser.add_argument("--gen_tokens", type=int, default=256)
     parser.add_argument("--batch_size", type=int, default=1)
-    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument(
+        "--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu"
+    )
     args = parser.parse_args()
 
     config = CONFIG_MAP[args.config]
@@ -103,7 +106,9 @@ def main():
     params = model.count_parameters()
     print(f"  Parameters: {params / 1e6:.1f}M")
 
-    input_ids = torch.randint(0, config.vocab_size, (args.batch_size, args.seq_len), device=args.device)
+    input_ids = torch.randint(
+        0, config.vocab_size, (args.batch_size, args.seq_len), device=args.device
+    )
 
     # Prefill
     model.eval()

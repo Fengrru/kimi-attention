@@ -36,22 +36,18 @@ logger = get_logger(__name__)
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Kimi Transformer Inference")
 
-    parser.add_argument("--checkpoint", type=str, required=True,
-                        help="Path to model checkpoint")
-    parser.add_argument("--prompt", type=str, required=True,
-                        help="Input prompt text")
-    parser.add_argument("--max_tokens", type=int, default=200,
-                        help="Maximum tokens to generate")
-    parser.add_argument("--temperature", type=float, default=0.8,
-                        help="Sampling temperature")
-    parser.add_argument("--top_k", type=int, default=50,
-                        help="Top-k sampling (0 = disabled)")
-    parser.add_argument("--top_p", type=float, default=0.95,
-                        help="Nucleus sampling threshold (0 = disabled)")
-    parser.add_argument("--device", type=str, default="cuda",
-                        help="Compute device")
-    parser.add_argument("--compile", action="store_true",
-                        help="torch.compile() the model for speed")
+    parser.add_argument("--checkpoint", type=str, required=True, help="Path to model checkpoint")
+    parser.add_argument("--prompt", type=str, required=True, help="Input prompt text")
+    parser.add_argument("--max_tokens", type=int, default=200, help="Maximum tokens to generate")
+    parser.add_argument("--temperature", type=float, default=0.8, help="Sampling temperature")
+    parser.add_argument("--top_k", type=int, default=50, help="Top-k sampling (0 = disabled)")
+    parser.add_argument(
+        "--top_p", type=float, default=0.95, help="Nucleus sampling threshold (0 = disabled)"
+    )
+    parser.add_argument("--device", type=str, default="cuda", help="Compute device")
+    parser.add_argument(
+        "--compile", action="store_true", help="torch.compile() the model for speed"
+    )
 
     return parser.parse_args()
 
@@ -78,8 +74,9 @@ def main() -> None:
     ckpt = torch.load(args.checkpoint, map_location=args.device, weights_only=False)
     config = ckpt["config"]
 
-    logger.info(f"Model config: dim={config.dim}, layers={config.num_layers}, "
-                f"heads={config.num_heads}")
+    logger.info(
+        f"Model config: dim={config.dim}, layers={config.num_layers}, " f"heads={config.num_heads}"
+    )
 
     # Build and load model
     model = KimiTransformer(config).to(args.device)

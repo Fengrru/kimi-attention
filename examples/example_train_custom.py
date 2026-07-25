@@ -24,14 +24,14 @@ setup_logging()
 def main():
     # Step 1: Define a small custom configuration
     config = KimiConfig(
-        dim=256,            # Small dimension for demo
-        num_layers=4,       # Only 4 layers
-        num_heads=4,        # 4 attention heads
+        dim=256,  # Small dimension for demo
+        num_layers=4,  # Only 4 layers
+        num_heads=4,  # 4 attention heads
         mlp_ratio=4.0,
-        vocab_size=1000,    # Tiny vocabulary
-        max_seq_len=128,    # Short sequences
-        layers_per_block=2, # AttnRes block size
-        kda_every=2,        # 1:1 KDA:MHA ratio for demo
+        vocab_size=1000,  # Tiny vocabulary
+        max_seq_len=128,  # Short sequences
+        layers_per_block=2,  # AttnRes block size
+        kda_every=2,  # 1:1 KDA:MHA ratio for demo
         eps=1e-6,
         dropout=0.1,
     )

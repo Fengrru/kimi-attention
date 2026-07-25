@@ -12,8 +12,8 @@ Usage::
 """
 
 import argparse
-import time
 import sys
+import time
 from collections import defaultdict
 
 import torch
@@ -47,9 +47,9 @@ def exp1_kda_vs_mha():
     sep("Experiment 1: KDA vs MHA Speed vs Sequence Length")
 
     configs = {
-        "KDA (all)":     dict(kda_every=0),
-        "3:1 Hybrid":    dict(kda_every=4),
-        "MHA (all)":     dict(kda_every=1),
+        "KDA (all)": dict(kda_every=0),
+        "3:1 Hybrid": dict(kda_every=4),
+        "MHA (all)": dict(kda_every=1),
     }
     seq_lens = [128, 256, 512, 1024]
     gen_tokens = 32
@@ -58,9 +58,13 @@ def exp1_kda_vs_mha():
 
     for name, overrides in configs.items():
         cfg = KimiConfig(
-            dim=128, num_layers=4, num_heads=4,
-            vocab_size=500, max_seq_len=max(seq_lens) + gen_tokens,
-            layers_per_block=2, **overrides,
+            dim=128,
+            num_layers=4,
+            num_heads=4,
+            vocab_size=500,
+            max_seq_len=max(seq_lens) + gen_tokens,
+            layers_per_block=2,
+            **overrides,
         )
         model = KimiTransformer(cfg)
         model.eval()
@@ -85,8 +89,10 @@ def exp1_kda_vs_mha():
             t1 = time.perf_counter()
             results[name]["generate"].append(t1 - t0)
 
-            print(f"    seq={sl:5d}  prefill={results[name]['prefill'][-1]:.3f}s  "
-                  f"gen({gen_tokens})={results[name]['generate'][-1]:.3f}s")
+            print(
+                f"    seq={sl:5d}  prefill={results[name]['prefill'][-1]:.3f}s  "
+                f"gen({gen_tokens})={results[name]['generate'][-1]:.3f}s"
+            )
 
     # Summary table
     print(f"\n  {'Seq Len':>8s}", end="")
@@ -139,16 +145,19 @@ def exp2_attnres_ablation():
         return torch.randint(0, vocab_size, (batch_size, seq_len))
 
     variants = {
-        "With AttnRes":  dict(layers_per_block=2),
-        "No AttnRes":    dict(layers_per_block=1),
+        "With AttnRes": dict(layers_per_block=2),
+        "No AttnRes": dict(layers_per_block=1),
     }
 
     losses = {name: [] for name in variants}
 
     for name, overrides in variants.items():
         config = KimiConfig(
-            dim=dim, num_layers=num_layers, num_heads=4,
-            vocab_size=vocab_size, max_seq_len=seq_len,
+            dim=dim,
+            num_layers=num_layers,
+            num_heads=4,
+            vocab_size=vocab_size,
+            max_seq_len=seq_len,
             kda_every=1,  # all MHA for clean comparison
             **overrides,
         )
@@ -157,16 +166,16 @@ def exp2_attnres_ablation():
         opt = torch.optim.AdamW(model.parameters(), lr=lr)
         model.train()
 
-        print(f"\n  [{name}]  params={hr(params)}  layers_per_block={overrides['layers_per_block']}")
+        print(
+            f"\n  [{name}]  params={hr(params)}  layers_per_block={overrides['layers_per_block']}"
+        )
 
         for step in range(steps):
             ids = data_batch()
             labels = ids.clone()
 
             logits = model(ids)
-            loss = torch.nn.functional.cross_entropy(
-                logits.view(-1, vocab_size), labels.view(-1)
-            )
+            loss = torch.nn.functional.cross_entropy(logits.view(-1, vocab_size), labels.view(-1))
             loss.backward()
             opt.step()
             opt.zero_grad()
@@ -190,8 +199,10 @@ def exp2_attnres_ablation():
     final_without = losses["No AttnRes"][-1]
     print(f"\n  Final loss:  with={final_with:.4f}  without={final_without:.4f}")
     if final_with < final_without:
-        print(f"  AttnRes wins by {final_without - final_with:.4f} "
-              f"({final_without/final_with:.1f}x lower loss)")
+        print(
+            f"  AttnRes wins by {final_without - final_with:.4f} "
+            f"({final_without/final_with:.1f}x lower loss)"
+        )
     else:
         print(f"  No significant difference ({final_with - final_without:.4f})")
 
@@ -205,8 +216,7 @@ def exp2_attnres_ablation():
         nl = losses["No AttnRes"][i]
         wb = int(wl / max(max_loss, 0.01) * width)
         nb = int(nl / max(max_loss, 0.01) * width)
-        print(f"  step {i:4d}  {'#' * wb}{'.' * (width - wb)}  "
-              f"{'#' * nb}{'.' * (width - nb)}")
+        print(f"  step {i:4d}  {'#' * wb}{'.' * (width - wb)}  " f"{'#' * nb}{'.' * (width - nb)}")
 
 
 # ---------------------------------------------------------------------------
@@ -227,8 +237,12 @@ def exp3_gqa_compression():
 
     for kv_heads in kv_head_configs:
         config = KimiConfig(
-            dim=dim, num_layers=num_layers, num_heads=num_heads,
-            num_kv_heads=kv_heads, vocab_size=2000, max_seq_len=seq_len + gen_tokens,
+            dim=dim,
+            num_layers=num_layers,
+            num_heads=num_heads,
+            num_kv_heads=kv_heads,
+            vocab_size=2000,
+            max_seq_len=seq_len + gen_tokens,
             kda_every=0,  # all MHA so we can measure pure KV cache effect
             layers_per_block=2,
         )
@@ -264,20 +278,26 @@ def exp3_gqa_compression():
             "gen_tok_s": gen_tokens / gen_time if gen_time > 0 else 0,
         }
 
-        print(f"  KV heads={kv_heads:2d}  params={hr(params)}  "
-              f"KV cache={kv_mb:.1f}MB  prefill={prefill_time:.3f}s  "
-              f"gen={gen_time:.3f}s ({gen_tokens/gen_time:.0f} tok/s)")
+        print(
+            f"  KV heads={kv_heads:2d}  params={hr(params)}  "
+            f"KV cache={kv_mb:.1f}MB  prefill={prefill_time:.3f}s  "
+            f"gen={gen_time:.3f}s ({gen_tokens/gen_time:.0f} tok/s)"
+        )
 
     # Summary table
-    print(f"\n  {'KV Heads':>10s}  {'KV Cache':>10s}  {'Prefill':>10s}  "
-          f"{'Generate':>10s}  {'Tok/s':>10s}  {'Reduction':>12s}")
+    print(
+        f"\n  {'KV Heads':>10s}  {'KV Cache':>10s}  {'Prefill':>10s}  "
+        f"{'Generate':>10s}  {'Tok/s':>10s}  {'Reduction':>12s}"
+    )
     baseline_kv = results[8]["kv_cache_mb"]
     for kv_heads in kv_head_configs:
         r = results[kv_heads]
         reduction = (1 - r["kv_cache_mb"] / baseline_kv) * 100 if baseline_kv > 0 else 0
-        print(f"  {kv_heads:>10d}  {r['kv_cache_mb']:>8.1f}MB  "
-              f"{r['prefill_s']:>8.3f}s  {r['gen_s']:>8.3f}s  "
-              f"{r['gen_tok_s']:>8.0f}  {reduction:>10.1f}%")
+        print(
+            f"  {kv_heads:>10d}  {r['kv_cache_mb']:>8.1f}MB  "
+            f"{r['prefill_s']:>8.3f}s  {r['gen_s']:>8.3f}s  "
+            f"{r['gen_tok_s']:>8.0f}  {reduction:>10.1f}%"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -285,8 +305,9 @@ def exp3_gqa_compression():
 # ---------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser(description="Lightweight Kimi Attention experiments")
-    parser.add_argument("--exp", type=int, choices=[1, 2, 3], default=0,
-                        help="Experiment to run (0 = all)")
+    parser.add_argument(
+        "--exp", type=int, choices=[1, 2, 3], default=0, help="Experiment to run (0 = all)"
+    )
     args = parser.parse_args()
 
     print("Kimi Attention — Lightweight Experiments")

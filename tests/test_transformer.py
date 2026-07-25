@@ -95,9 +95,13 @@ class TestKimiTransformer:
         """Model should work at different scales."""
         # Build a small config inspired by 1B but sized for test environments
         config = KimiConfig(
-            dim=512, num_layers=8, num_heads=8,
-            vocab_size=1000, max_seq_len=64,
-            layers_per_block=2, kda_every=4,
+            dim=512,
+            num_layers=8,
+            num_heads=8,
+            vocab_size=1000,
+            max_seq_len=64,
+            layers_per_block=2,
+            kda_every=4,
         )
         model = KimiTransformer(config)
 
@@ -212,8 +216,13 @@ class TestKimiTransformer:
     def test_gqa_kv_heads(self):
         """GQA: KV heads fewer than Q heads should work correctly."""
         config = KimiConfig(
-            dim=256, num_layers=4, num_heads=8, num_kv_heads=2,
-            vocab_size=1000, max_seq_len=64, kda_every=0,
+            dim=256,
+            num_layers=4,
+            num_heads=8,
+            num_kv_heads=2,
+            vocab_size=1000,
+            max_seq_len=64,
+            kda_every=0,
             layers_per_block=2,
         )
         model = KimiTransformer(config)
@@ -225,10 +234,15 @@ class TestKimiTransformer:
     def test_moe_model(self):
         """Transformer with MoE FFN should work end‑to‑end."""
         config = KimiConfig(
-            dim=128, num_layers=2, num_heads=4,
-            vocab_size=500, max_seq_len=32,
-            kda_every=0, layers_per_block=2,
-            num_experts=4, num_experts_per_tok=2,
+            dim=128,
+            num_layers=2,
+            num_heads=4,
+            vocab_size=500,
+            max_seq_len=32,
+            kda_every=0,
+            layers_per_block=2,
+            num_experts=4,
+            num_experts_per_tok=2,
         )
         model = KimiTransformer(config)
         model.train()
@@ -249,10 +263,14 @@ class TestKimiTransformer:
     def test_rope_model(self):
         """Model with RoPE should produce valid outputs."""
         config = KimiConfig(
-            dim=128, num_layers=2, num_heads=4,
-            vocab_size=500, max_seq_len=64,
+            dim=128,
+            num_layers=2,
+            num_heads=4,
+            vocab_size=500,
+            max_seq_len=64,
             rope_theta=10000.0,
-            kda_every=0, layers_per_block=2,
+            kda_every=0,
+            layers_per_block=2,
         )
         model = KimiTransformer(config)
         input_ids = torch.randint(0, config.vocab_size, (1, 16))
@@ -262,15 +280,22 @@ class TestKimiTransformer:
     def test_beam_search(self):
         """Beam search should produce a longer sequence."""
         config = KimiConfig(
-            dim=64, num_layers=2, num_heads=4,
-            vocab_size=200, max_seq_len=32,
-            kda_every=0, layers_per_block=2,
+            dim=64,
+            num_layers=2,
+            num_heads=4,
+            vocab_size=200,
+            max_seq_len=32,
+            kda_every=0,
+            layers_per_block=2,
         )
         model = KimiTransformer(config)
         prompt = torch.randint(0, config.vocab_size, (1, 4))
 
         generated = model.generate_beam(
-            prompt, max_new_tokens=8, num_beams=3, eos_token_id=0,
+            prompt,
+            max_new_tokens=8,
+            num_beams=3,
+            eos_token_id=0,
         )
         assert generated.shape[0] == 1
         assert generated.shape[1] > 4

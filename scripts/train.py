@@ -59,7 +59,9 @@ def parse_args() -> argparse.Namespace:
     # Model config
     group = parser.add_argument_group("Model Configuration")
     group.add_argument(
-        "--config", type=str, default="1B",
+        "--config",
+        type=str,
+        default="1B",
         choices=["1B", "7B", "48B", "custom"],
         help="Model configuration preset",
     )
@@ -138,8 +140,10 @@ def main() -> None:
         config.rope_theta = args.rope_theta
     config.max_seq_len = max(config.max_seq_len, args.seq_len)
 
-    logger.info(f"Config: {args.config} | dim={config.dim} | layers={config.num_layers} | "
-                f"heads={config.num_heads}")
+    logger.info(
+        f"Config: {args.config} | dim={config.dim} | layers={config.num_layers} | "
+        f"heads={config.num_heads}"
+    )
 
     # Build model
     model = KimiTransformer(config).to(args.device)
@@ -147,14 +151,23 @@ def main() -> None:
     logger.info(f"Model parameters: {total_params / 1e6:.1f}M")
 
     # Optimizer (AdamW with weight decay on non-bias/norm params)
-    decay_params = [p for n, p in model.named_parameters()
-                    if p.dim() >= 2 and "bias" not in n and "norm" not in n]
-    no_decay_params = [p for n, p in model.named_parameters()
-                       if p.dim() < 2 or "bias" in n or "norm" in n]
-    optimizer = torch.optim.AdamW([
-        {"params": decay_params, "weight_decay": args.weight_decay},
-        {"params": no_decay_params, "weight_decay": 0.0},
-    ], lr=args.learning_rate, betas=(0.9, 0.95), eps=1e-8)
+    decay_params = [
+        p
+        for n, p in model.named_parameters()
+        if p.dim() >= 2 and "bias" not in n and "norm" not in n
+    ]
+    no_decay_params = [
+        p for n, p in model.named_parameters() if p.dim() < 2 or "bias" in n or "norm" in n
+    ]
+    optimizer = torch.optim.AdamW(
+        [
+            {"params": decay_params, "weight_decay": args.weight_decay},
+            {"params": no_decay_params, "weight_decay": 0.0},
+        ],
+        lr=args.learning_rate,
+        betas=(0.9, 0.95),
+        eps=1e-8,
+    )
 
     # Training state
     step = 0
@@ -162,9 +175,12 @@ def main() -> None:
 
     # Create dummy data loader (replace with real dataset)
     logger.info("Using synthetic data for demonstration. Replace with real dataset.")
+
     def dummy_dataloader():
         while True:
-            yield torch.randint(0, config.vocab_size, (args.batch_size, args.seq_len), device=args.device)
+            yield torch.randint(
+                0, config.vocab_size, (args.batch_size, args.seq_len), device=args.device
+            )
 
     data_iter = dummy_dataloader()
 
@@ -211,13 +227,16 @@ def main() -> None:
         if step > 0 and step % args.save_every == 0:
             ckpt_path = Path(args.output_dir) / f"checkpoint_step_{step}.pt"
             ckpt_path.parent.mkdir(parents=True, exist_ok=True)
-            torch.save({
-                "step": step,
-                "model_state_dict": model.state_dict(),
-                "optimizer_state_dict": optimizer.state_dict(),
-                "config": config,
-                "loss": loss.item(),
-            }, ckpt_path)
+            torch.save(
+                {
+                    "step": step,
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "config": config,
+                    "loss": loss.item(),
+                },
+                ckpt_path,
+            )
             logger.info(f"Saved checkpoint to {ckpt_path}")
 
     logger.info("Training complete!")

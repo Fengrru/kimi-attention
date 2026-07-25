@@ -65,8 +65,10 @@ def main():
     loss.backward()
 
     assert x_grad.grad is not None, "No gradient computed!"
-    logger.info(f"\nGradient flow verified: input grad shape={x_grad.grad.shape}, "
-                f"mean={x_grad.grad.mean():.6f}")
+    logger.info(
+        f"\nGradient flow verified: input grad shape={x_grad.grad.shape}, "
+        f"mean={x_grad.grad.mean():.6f}"
+    )
 
     logger.info("\nAll checks passed! KDA layer is ready for integration.")
 

@@ -3,38 +3,41 @@
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch 2.0+](https://img.shields.io/badge/pytorch-2.0+-red.svg)](https://pytorch.org/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
-[![Tests](https://github.com/Fengrru/kimi-attention/actions/workflows/test.yml/badge.svg)](https://github.com/Fengrru/kimi-attention/actions/workflows/test.yml)
-[![Style](https://img.shields.io/badge/style-black-000000.svg)](https://github.com/psf/black)
+[![Tests](https://img.shields.io/badge/tests-148%20passed-brightgreen.svg)]()
 
-A PyTorch implementation of [Kimi's attention mechanisms](https://arxiv.org/abs/2603.15031) — Attention Residuals (AttnRes) and Kimi Delta Attention (KDA).
+A PyTorch implementation of Kimi's attention mechanisms — **Attention Residuals (AttnRes)** and **Kimi Delta Attention (KDA)**.
 
-> **Papers**: [Attention Residuals](https://arxiv.org/abs/2603.15031) | [Kimi Linear](https://arxiv.org/abs/2510.26692)
-> **Reference**: [Moonshot AI](https://github.com/MoonshotAI) | [FLA Kernels](https://github.com/fla-org/flash-linear-attention)
+> **Paper**: [Attention Residuals](https://arxiv.org/abs/2603.15031) · [Kimi Linear](https://arxiv.org/abs/2510.26692)
+
+---
 
 ## Abstract
 
-This repository implements the two core attention innovations from Moonshot AI's Kimi model series:
+We introduce two mechanisms from Moonshot AI's Kimi model series:
 
 | Mechanism | Core Idea | Reported Gains |
 |-----------|-----------|----------------|
-| **Attention Residuals (AttnRes)** | Replaces fixed residual summation with depth-wise attention that dynamically weights previous layers | +25% training efficiency, +7.5 GPQA, +3.1 HumanEval |
-| **Kimi Delta Attention (KDA)** | Linear attention with per-dimension independent forget gates | 6x decode speed (1M ctx), -75% KV cache, 3.98x throughput |
+| **Attention Residuals** | Replaces fixed residual summation with depth-wise attention | +25% training efficiency, +7.5 GPQA, +3.1 HumanEval |
+| **Kimi Delta Attention** | Linear attention with per-dimension independent forget gates | 6x decode speed, -75% KV cache, 3.98x throughput |
 
-Both are designed as drop-in replacements for standard Transformer layers.
+Both are drop-in replacements for standard Transformer layers.
+
+---
 
 ## Development Status
 
-- **Version**: 1.0.0
+- **Version**: 0.1.0 (Beta)
 - **Tests**: 148 passing
-- **Python**: 3.9 - 3.12
+- **Python**: 3.9 – 3.12
 - **PyTorch**: 2.0+
+
+---
 
 ## Quick Start
 
-### Installation
+### Option 1: pip
 
 ```bash
-# Basic (CPU & GPU)
 pip install -e .
 
 # With CUDA-optimized KDA kernels
@@ -43,6 +46,16 @@ pip install -e ".[flash]"
 # Development
 pip install -e ".[dev,flash,train]"
 ```
+
+### Option 2: From source
+
+```bash
+git clone https://github.com/Fengrru/kimi-attention.git
+cd kimi-attention
+pip install -e .
+```
+
+---
 
 ## Architecture
 
@@ -58,13 +71,19 @@ pip install -e ".[dev,flash,train]"
   <img src="assets/kda.png" width="70%">
 </p>
 
-### Usage
+---
+
+## Usage
 
 ```python
-from kimi_attention import KimiTransformer, KimiConfig, KimiDeltaAttentionLayer, BlockAttentionResiduals
+from kimi_attention import KimiTransformer, KimiConfig
 
-# Full model (hybrid 3:1 KDA:MHA)
-config = KimiConfig.from_size("7B")  # or "1B", "48B"
+# Load official preset (1B, 7B, 48B)
+config = KimiConfig.from_size("7B")
+
+# Or define custom
+config = KimiConfig(dim=512, num_layers=8, num_heads=8, vocab_size=32000)
+
 model = KimiTransformer(config)
 
 # Forward
@@ -74,21 +93,46 @@ logits = model(input_ids)  # [2, 128, vocab_size]
 
 # Generate
 output = model.generate(input_ids, max_new_tokens=100, temperature=0.8, top_k=50)
-
-# Standalone KDA layer (drop-in for nn.MultiheadAttention)
-kda = KimiDeltaAttentionLayer(dim=512, num_heads=8)
-
-# AttnRes wrapper (zero-change integration)
-attn_res = BlockAttentionResiduals(dim=512, layers_per_block=4)
 ```
 
-Configure KDA/MHA ratio via `kda_every`:
+### Standalone KDA Layer
+
+```python
+from kimi_attention import KimiDeltaAttentionLayer
+
+kda = KimiDeltaAttentionLayer(dim=512, num_heads=8)
+output = kda(input)  # [B, T, D]
+```
+
+### AttnRes Integration
+
+```python
+from kimi_attention import BlockAttentionResiduals
+
+attn_res = BlockAttentionResiduals(dim=512, layers_per_block=4)
+
+blocks, hidden = [], embedding_output
+for layer_idx in range(num_layers):
+    blocks, hidden = attn_res(
+        blocks=blocks,
+        hidden_states=hidden,
+        layer_number=layer_idx,
+        attn_fn=your_attention,
+        mlp_fn=your_ffn,
+        attn_norm=your_attn_norm,
+        mlp_norm=your_mlp_norm,
+    )
+```
+
+### KDA/MHA Ratio
 
 | `kda_every` | Ratio | Use case |
 |-------------|-------|----------|
 | 4 (default) | 3:1 KDA:MHA | Best speed/accuracy tradeoff |
-| 0 | all KDA | Maximum efficiency |
-| 1 | all MHA | Standard Transformer |
+| 0 | All KDA | Maximum efficiency |
+| 1 | All MHA | Standard Transformer |
+
+---
 
 ## Presets
 
@@ -98,32 +142,15 @@ Configure KDA/MHA ratio via `kda_every`:
 | **7B** | 32 | 4096 | 32 | 64K | 128K | ~7B |
 | **48B** | 64 | 8192 | 64 | 128K | 1M | ~48B |
 
+---
+
 ## Performance
 
 <p align="center">
   <img src="assets/performance.png" width="50%">
 </p>
 
-## Project Structure
-
-```
-kimi-attention/
-├── kimi_attention/
-│   ├── models/
-│   │   ├── attention_residuals.py   # AttnRes
-│   │   ├── delta_attention.py       # KDA
-│   │   ├── transformer.py           # KimiTransformer, KimiConfig
-│   │   ├── rmsnorm.py               # RMSNorm
-│   │   ├── rope.py                  # RotaryEmbedding
-│   │   └── moe.py                   # MoE FFN
-│   └── configs/                     # Official presets (1B/7B/48B)
-├── tests/                           # 148 tests
-├── scripts/
-│   ├── train.py                     # Training with AMP, LR scheduling
-│   ├── inference.py                 # Inference script
-│   └── benchmark.py                 # Performance benchmarking
-└── examples/                        # Integration examples
-```
+---
 
 ## Training
 
@@ -139,25 +166,43 @@ python scripts/train.py \
 
 Features: AMP, cosine LR with warmup, gradient clipping, checkpointing, WandB integration.
 
-## API Reference
+---
 
-| Class | Description |
-|-------|-------------|
-| `KimiConfig(...)` | Model configuration dataclass |
-| `KimiTransformer(config)` | Complete model (AttnRes + hybrid KDA) |
-| `KimiDeltaAttentionLayer(dim, num_heads)` | Drop-in KDA layer |
-| `BlockAttentionResiduals(dim, layers_per_block)` | AttnRes wrapper |
-| `KIMI_LINEAR_{1B,7B,48B}_CONFIG` | Official presets |
+## Project Structure
 
-See docstrings in each module for full API documentation.
+```
+kimi-attention/
+├── kimi_attention/
+│   ├── models/           # Core modules
+│   │   ├── attention_residuals.py
+│   │   ├── delta_attention.py
+│   │   ├── transformer.py
+│   │   ├── rmsnorm.py
+│   │   ├── rope.py
+│   │   └── moe.py
+│   └── configs/          # Official presets
+├── tests/                # 148 tests
+├── scripts/              # Training & inference
+└── examples/             # Integration examples
+```
 
-## Testing
+---
+
+## Linting
 
 ```bash
-pytest tests/ -v                                          # all tests
-pytest tests/ --cov=kimi_attention --cov-report=term-missing  # with coverage
-pytest tests/test_delta_attention.py -v                   # single module
+# Format
+black kimi_attention/
+isort kimi_attention/
+
+# Type check
+mypy kimi_attention/
+
+# Tests
+pytest tests/ -v
 ```
+
+---
 
 ## Citation
 
@@ -177,9 +222,13 @@ pytest tests/test_delta_attention.py -v                   # single module
 }
 ```
 
+---
+
 ## License
 
 [Apache 2.0](LICENSE)
+
+---
 
 ## Acknowledgments
 

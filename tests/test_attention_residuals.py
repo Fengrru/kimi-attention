@@ -37,10 +37,13 @@ class TestBlockAttentionResiduals:
 
         for i in range(4):
             blocks, hidden = attn_res(
-                blocks, hidden, i,
+                blocks,
+                hidden,
+                i,
                 lambda x: layer(norm_a(x)),
                 lambda x: mlp(norm_m(x)),
-                norm_a, norm_m,
+                norm_a,
+                norm_m,
             )
         assert hidden.shape == (2, 8, dim)
 
@@ -57,10 +60,13 @@ class TestBlockAttentionResiduals:
 
         for i in range(6):
             blocks, hidden = attn_res(
-                blocks, hidden, i,
+                blocks,
+                hidden,
+                i,
                 lambda x: layer(norm_a(x)),
                 lambda x: mlp(norm_m(x)),
-                norm_a, norm_m,
+                norm_a,
+                norm_m,
             )
 
         # layers_per_block=2, so after 6 layers we expect 3 blocks
@@ -84,10 +90,13 @@ class TestBlockAttentionResiduals:
         norm = RMSNorm(dim)
 
         blocks, output = attn_res(
-            blocks, hidden, 0,
+            blocks,
+            hidden,
+            0,
             lambda x: layer(norm(x)),
             lambda x: mlp(norm(x)),
-            norm, norm,
+            norm,
+            norm,
         )
         # On first layer with empty blocks, h_attn = hidden (identity)
         # So output should be close to going through the layer
@@ -108,10 +117,13 @@ class TestBlockAttentionResiduals:
         hidden = x_input
         for i in range(4):
             blocks, hidden = attn_res(
-                blocks, hidden, i,
+                blocks,
+                hidden,
+                i,
                 lambda x: layer(norm_a(x)),
                 lambda x: mlp(norm_m(x)),
-                norm_a, norm_m,
+                norm_a,
+                norm_m,
             )
 
         loss = hidden.sum()
@@ -134,10 +146,13 @@ class TestBlockAttentionResiduals:
 
         for i in range(4):
             blocks, hidden = attn_res(
-                blocks, hidden, i,
+                blocks,
+                hidden,
+                i,
                 lambda x: layer(norm_a(x)),
                 lambda x: mlp(norm_m(x)),
-                norm_a, norm_m,
+                norm_a,
+                norm_m,
             )
 
         assert len(blocks) > 0
@@ -168,10 +183,13 @@ class TestBlockAttentionResiduals:
         num_layers = layers_per_block * 2
         for i in range(num_layers):
             blocks, hidden = attn_res(
-                blocks, hidden, i,
+                blocks,
+                hidden,
+                i,
                 lambda x: layer(norm(x)),
                 lambda x: mlp(norm(x)),
-                norm, norm,
+                norm,
+                norm,
             )
 
         assert len(blocks) == num_layers // layers_per_block
@@ -193,19 +211,19 @@ class TestBlockAttentionResiduals:
         blocks1, out1 = [], hidden1
         blocks2, out2 = [], hidden2
         for i in range(4):
-            blocks1, out1 = attn_res(blocks1, out1, i,
-                lambda x: layer(norm(x)),
-                lambda x: mlp(norm(x)), norm, norm)
-            blocks2, out2 = attn_res(blocks2, out2, i,
-                lambda x: layer(norm(x)),
-                lambda x: mlp(norm(x)), norm, norm)
+            blocks1, out1 = attn_res(
+                blocks1, out1, i, lambda x: layer(norm(x)), lambda x: mlp(norm(x)), norm, norm
+            )
+            blocks2, out2 = attn_res(
+                blocks2, out2, i, lambda x: layer(norm(x)), lambda x: mlp(norm(x)), norm, norm
+            )
 
         # Process together
         blocks_c, out_c = [], combined
         for i in range(4):
-            blocks_c, out_c = attn_res(blocks_c, out_c, i,
-                lambda x: layer(norm(x)),
-                lambda x: mlp(norm(x)), norm, norm)
+            blocks_c, out_c = attn_res(
+                blocks_c, out_c, i, lambda x: layer(norm(x)), lambda x: mlp(norm(x)), norm, norm
+            )
 
         assert torch.allclose(out1, out_c[0:1], atol=1e-5)
         assert torch.allclose(out2, out_c[1:2], atol=1e-5)
@@ -223,10 +241,13 @@ class TestBlockAttentionResiduals:
         blocks = []
         for i in range(4):
             blocks, hidden = attn_res(
-                blocks, hidden, i,
+                blocks,
+                hidden,
+                i,
                 lambda x: layer(norm_a(x)),
                 lambda x: mlp(norm_m(x)),
-                norm_a, norm_m,
+                norm_a,
+                norm_m,
             )
 
         # With layers_per_block=2, after 4 layers: blocks 0 completed at l=1, blocks 1 at l=3
