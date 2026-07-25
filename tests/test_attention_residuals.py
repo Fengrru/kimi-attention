@@ -260,9 +260,6 @@ class TestBlockAttentionResiduals:
         attn_res = BlockAttentionResiduals(dim, layers_per_block=2)
 
         hidden = torch.randn(2, 4, dim)
-        layer = self._make_dummy_layer(dim)
-        mlp = self._make_dummy_mlp(dim)
-        norm_a, norm_m = RMSNorm(dim), RMSNorm(dim)
 
         # Create one previous block so aggregation is tested
         blocks = [torch.randn(2, 4, dim)]

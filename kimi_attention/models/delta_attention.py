@@ -43,15 +43,12 @@ linear-attention
 
 from __future__ import annotations
 
-import math
 import warnings
 from typing import Optional
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-from kimi_attention.models.rmsnorm import RMSNorm
 
 
 class KimiDeltaAttention(nn.Module):

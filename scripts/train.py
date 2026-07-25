@@ -27,13 +27,9 @@ Features:
 """
 
 import argparse
-import os
 from pathlib import Path
 
 import torch
-import torch.distributed as dist
-from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.utils.data import DataLoader
 
 from kimi_attention.configs import (
     KIMI_LINEAR_1B_CONFIG,
@@ -171,7 +167,6 @@ def main() -> None:
 
     # Training state
     step = 0
-    best_loss = float("inf")
 
     # Create dummy data loader (replace with real dataset)
     logger.info("Using synthetic data for demonstration. Replace with real dataset.")

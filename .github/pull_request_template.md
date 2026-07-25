@@ -18,8 +18,8 @@ Closes # (issue number)
 ## Checklist
 
 - [ ] Tests added/updated and passing (`pytest tests/ -v`)
-- [ ] Code formatted (`black kimi_attention/ tests/ scripts/`)
-- [ ] Imports sorted (`isort kimi_attention/ tests/ scripts/`)
+- [ ] Code formatted (`black kimi_attention/ tests/ scripts/ examples/`)
+- [ ] Imports sorted (`isort kimi_attention/ tests/ scripts/ examples/`)
 - [ ] Type checks pass (`mypy kimi_attention/ --ignore-missing-imports`)
 - [ ] Documentation updated (if applicable)
 - [ ] CHANGELOG updated (if applicable)

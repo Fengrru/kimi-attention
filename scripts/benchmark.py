@@ -92,7 +92,7 @@ def main():
         config.num_experts = args.num_experts
     config.kda_every = args.kda_every
 
-    print(f"=== Kimi Transformer Benchmark ===")
+    print("=== Kimi Transformer Benchmark ===")
     print(f"  Config:   {args.config}")
     print(f"  Dim:      {config.dim}")
     print(f"  Layers:   {config.num_layers}")

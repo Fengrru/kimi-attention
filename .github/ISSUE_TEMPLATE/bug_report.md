@@ -29,7 +29,7 @@ What actually happened. Include the full error traceback.
 - OS: [e.g. Ubuntu 22.04, Windows 11, macOS 14]
 - Python version: [e.g. 3.12.0]
 - PyTorch version: [e.g. 2.5.0]
-- kimi-attention version/commit: [e.g. v0.1.0 or commit hash]
+- kimi-attention version/commit: [e.g. v1.0.0 or commit hash]
 - GPU (if applicable): [e.g. NVIDIA A100, None]
 
 ## Additional Context

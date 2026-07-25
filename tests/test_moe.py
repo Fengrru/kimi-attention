@@ -2,7 +2,6 @@
 Tests for Mixture of Experts (MoE) Feed-Forward network.
 """
 
-import pytest
 import torch
 
 from kimi_attention.models.moe import MoEFeedForward

@@ -11,7 +11,7 @@
 
 If you discover a security vulnerability, please **do NOT** open a public issue.
 
-Instead, please report it via email to the project maintainers. We take all
+Instead, please report it via [GitHub Security Advisories](https://github.com/Fengrru/kimi-attention/security/advisories/new) or email to the project maintainers. We take all
 security issues seriously and will respond promptly.
 
 ### What to Include

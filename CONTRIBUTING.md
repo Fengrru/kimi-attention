@@ -46,7 +46,7 @@ All checks must pass before a PR can be merged.
 
 ## Pull Request Process
 
-1. **Fork and branch**: Create a feature branch from `main`
+1. **Fork and branch**: Create a feature branch from `master`
 2. **Write tests**: Add tests for new functionality
 3. **Pass checks**: Ensure all style and test checks pass
 4. **Update docs**: Update README.md if adding new features
