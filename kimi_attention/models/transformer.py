@@ -33,7 +33,7 @@ Example::
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 import torch
 import torch.nn as nn
@@ -151,7 +151,7 @@ class KimiConfig:
         }
         if size not in presets:
             raise ValueError(f"Unknown size: {size}. Choose from {list(presets.keys())}")
-        return cls(**presets[size])
+        return cls(**presets[size])  # type: ignore[arg-type]
 
 
 class TransformerBlock(nn.Module):
@@ -222,8 +222,11 @@ class TransformerBlock(nn.Module):
         self.dropout = nn.Dropout(config.dropout) if config.dropout > 0 else nn.Identity()
 
         # Flash Attention (lazy import)
-        self._flash_attn_fn = None
+        self._flash_attn_fn: Optional[Callable[..., torch.Tensor]] = None
         self._flash_checked = False
+
+        # KV cache for incremental MHA decoding
+        self._kv_cache: Optional[dict[str, torch.Tensor]] = None
 
         self._init_weights()
 
@@ -239,9 +242,10 @@ class TransformerBlock(nn.Module):
             pass
         return self._flash_attn_fn is not None
 
-    def _attn_sdpa(self, q, k, v, is_causal: bool = True):
+    def _attn_sdpa(self, q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, is_causal: bool = True) -> torch.Tensor:
         """Attention dispatch: FlashAttn on CUDA else PyTorch SDPA."""
         if q.is_cuda and self._try_flash_attn():
+            assert self._flash_attn_fn is not None, "FlashAttn not loaded"
             return self._flash_attn_fn(q, k, v, causal=is_causal)
         return F.scaled_dot_product_attention(q, k, v, is_causal=is_causal)
 
@@ -286,7 +290,7 @@ class TransformerBlock(nn.Module):
         attn_out = attn_out.transpose(1, 2).contiguous().view(B, T, -1)
         return self.o_proj(attn_out)
 
-    def _apply_rope(self, q: torch.Tensor, k: torch.Tensor, positions: torch.Tensor):
+    def _apply_rope(self, q: torch.Tensor, k: torch.Tensor, positions: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """Apply RoPE if the module is configured."""
         if self.rope is None:
             return q, k
@@ -342,10 +346,12 @@ class TransformerBlock(nn.Module):
         if positions is not None:
             q, k = self._apply_rope(q, k, positions)
 
-        had_cache = hasattr(self, "_kv_cache") and self._kv_cache is not None
+        _cache = self._kv_cache
+        had_cache = _cache is not None
         if had_cache:
-            k = torch.cat([self._kv_cache["k"], k], dim=2)
-            v = torch.cat([self._kv_cache["v"], v], dim=2)
+            assert _cache is not None
+            k = torch.cat([_cache["k"], k], dim=2)
+            v = torch.cat([_cache["v"], v], dim=2)
 
         self._kv_cache = {"k": k, "v": v}
 
@@ -392,10 +398,12 @@ class TransformerBlock(nn.Module):
 
             q, k = self._apply_rope(q, k, positions)
 
-            had_cache = use_cache and hasattr(self, "_kv_cache") and self._kv_cache is not None
+            _cache = self._kv_cache
+            had_cache = use_cache and _cache is not None
             if had_cache:
-                k = torch.cat([self._kv_cache["k"], k], dim=2)
-                v = torch.cat([self._kv_cache["v"], v], dim=2)
+                assert _cache is not None
+                k = torch.cat([_cache["k"], k], dim=2)
+                v = torch.cat([_cache["v"], v], dim=2)
 
             if use_cache:
                 self._kv_cache = {"k": k, "v": v}
@@ -560,7 +568,7 @@ class KimiTransformer(nn.Module):
 
         for layer_idx, layer in enumerate(self.layers):
 
-            def make_attn_fn(lyr: TransformerBlock):
+            def make_attn_fn(lyr: TransformerBlock) -> Callable[..., torch.Tensor]:
                 if lyr.use_kda:
                     # h is already normalized by attn_res.forward()
                     return lambda h: lyr.attn(h, positions=positions)
@@ -568,7 +576,7 @@ class KimiTransformer(nn.Module):
                     # h is already normalized; pass positions for RoPE
                     return lambda h: lyr.attn_forward(h, normed=True, positions=positions)
 
-            def make_mlp_fn(lyr: TransformerBlock):
+            def make_mlp_fn(lyr: TransformerBlock) -> Callable[..., torch.Tensor]:
                 # h is already normalized by attn_res.forward()
                 return lambda h: lyr.mlp_forward(h, normed=True)
 
@@ -828,7 +836,7 @@ class KimiTransformer(nn.Module):
         B, T = input_ids.shape
         device = input_ids.device
 
-        def _sample(logits):
+        def _sample(logits: torch.Tensor) -> torch.Tensor:
             nxt = logits[:, -1, :] / temperature
             if top_k is not None:
                 v, _ = torch.topk(nxt, min(top_k, nxt.size(-1)))
@@ -853,7 +861,7 @@ class KimiTransformer(nn.Module):
 
         for layer_idx, layer in enumerate(self.layers):
 
-            def make_attn_fn(lyr: TransformerBlock):
+            def make_attn_fn(lyr: TransformerBlock) -> Callable[..., torch.Tensor]:
                 if lyr.use_kda:
                     # KDA handles its own RoPE via the ``rope`` module
                     return lambda h: lyr.attn(h, positions=positions)
@@ -862,7 +870,7 @@ class KimiTransformer(nn.Module):
                         h, normed=True, positions=positions, store_cache=True
                     )
 
-            def make_mlp_fn(lyr: TransformerBlock):
+            def make_mlp_fn(lyr: TransformerBlock) -> Callable[..., torch.Tensor]:
                 return lambda h: lyr.mlp_forward(h, normed=True)
 
             blocks, hidden = self.attn_res(
@@ -896,13 +904,13 @@ class KimiTransformer(nn.Module):
 
             for layer_idx, layer in enumerate(self.layers):
 
-                def make_attn_fn_step(lyr: TransformerBlock):
+                def make_attn_fn_step(lyr: TransformerBlock) -> Callable[..., torch.Tensor]:
                     if lyr.use_kda:
                         return lambda h: lyr.attn(h, positions=pos_tensor)
                     else:
                         return lambda h: lyr.attn_incremental(h, normed=True, positions=pos_tensor)
 
-                def make_mlp_fn_step(lyr: TransformerBlock):
+                def make_mlp_fn_step(lyr: TransformerBlock) -> Callable[..., torch.Tensor]:
                     return lambda h: lyr.mlp_forward(h, normed=True)
 
                 blocks, hidden = self.attn_res.step(

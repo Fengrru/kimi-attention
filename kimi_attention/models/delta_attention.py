@@ -44,7 +44,7 @@ linear-attention
 from __future__ import annotations
 
 import warnings
-from typing import Optional
+from typing import Any, Callable, Optional
 
 import torch
 import torch.nn as nn
@@ -80,7 +80,7 @@ class KimiDeltaAttention(nn.Module):
         super().__init__()
         self.chunk_size = chunk_size
         self._has_fla: Optional[bool] = None
-        self._chunk_kda = None
+        self._chunk_kda: Optional[Callable[..., torch.Tensor]] = None
         self._recurrent_state: Optional[torch.Tensor] = None
 
     def _try_import_fla(self) -> bool:
@@ -249,6 +249,7 @@ class KimiDeltaAttention(nn.Module):
                     Attention output ``[B, H, T, D]``.
         """
         if self._try_import_fla() and q.is_cuda:
+            assert self._chunk_kda is not None, "FLA chunk_kda not loaded"
             beta_sig = torch.sigmoid(beta)
             return self._chunk_kda(q, k, v, beta_sig, g, chunk_size=self.chunk_size)
         else:
@@ -296,7 +297,7 @@ class KimiDeltaAttentionLayer(nn.Module):
         num_heads: int = 8,
         chunk_size: int = 64,
         eps: float = 1e-6,
-        rope: Optional[object] = None,
+        rope: Any = None,
     ) -> None:
         super().__init__()
         if dim % num_heads != 0:

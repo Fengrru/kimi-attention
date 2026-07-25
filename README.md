@@ -59,20 +59,12 @@ pip install -e ".[dev,flash,train]"
 </p>
 <p align="center"><em>Hybrid KDA-MHA Transformer with Attention Residuals across layers</em></p>
 
-### Key Mechanisms
+### Attention Residuals
 
-<table>
-<tr>
-<td width="50%" valign="top">
-  <img src="assets/attnres.png" width="100%" alt="Attention Residuals">
-  <p align="center"><em>Attention Residuals — depth-wise dynamic weighting across previous layers</em></p>
-</td>
-<td width="50%" valign="top">
-  <img src="assets/kda.png" width="100%" alt="Kimi Delta Attention">
-  <p align="center"><em>Kimi Delta Attention — per-channel forget gates with linear complexity</em></p>
-</td>
-</tr>
-</table>
+<p align="center">
+  <img src="assets/attnres.png" width="80%" alt="Attention Residuals">
+</p>
+<p align="center"><em>Attention Residuals — depth-wise dynamic weighting across previous layers</em></p>
 
 ---
 
