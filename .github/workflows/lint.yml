@@ -24,13 +24,13 @@ jobs:
           pip install black isort flake8 mypy
 
       - name: Run black (format check)
-        run: black --check --diff kimi_attention/ tests/ scripts/
+        run: black --check --diff kimi_attention/ tests/ scripts/ examples/
 
       - name: Run isort (import check)
-        run: isort --check-only --diff kimi_attention/ tests/ scripts/
+        run: isort --check-only --diff kimi_attention/ tests/ scripts/ examples/
 
       - name: Run flake8
-        run: flake8 kimi_attention/ tests/ scripts/ --count --show-source --statistics
+        run: flake8 kimi_attention/ tests/ scripts/ examples/ --max-line-length=100 --count --show-source --statistics
 
       - name: Run mypy
         run: mypy kimi_attention/ --ignore-missing-imports

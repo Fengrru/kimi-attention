@@ -1,10 +1,5 @@
 # kimi-attention
 
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![PyTorch 2.0+](https://img.shields.io/badge/pytorch-2.0+-red.svg)](https://pytorch.org/)
-[![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
-[![Tests](https://github.com/Fengrru/kimi-attention/actions/workflows/test.yml/badge.svg)](https://github.com/Fengrru/kimi-attention/actions/workflows/test.yml)
-
 A PyTorch implementation of Kimi's attention mechanisms — **Attention Residuals (AttnRes)** and **Kimi Delta Attention (KDA)**.
 
 > **Paper**: [Attention Residuals](https://arxiv.org/abs/2603.15031) · [Kimi Linear](https://arxiv.org/abs/2510.26692)
@@ -13,11 +8,11 @@ A PyTorch implementation of Kimi's attention mechanisms — **Attention Residual
 
 ## Abstract
 
-We introduce two mechanisms from Moonshot AI's Kimi model series:
+This repository implements two mechanisms from Moonshot AI's Kimi model series:
 
 | Mechanism | Core Idea | Reported Gains |
 |-----------|-----------|----------------|
-| **Attention Residuals** | Replaces fixed residual summation with depth-wise attention | +25% training efficiency, +7.5 GPQA, +3.1 HumanEval |
+| **Attention Residuals** | Replaces fixed residual summation with depth-wise attention | +25% training efficiency, +7.5 GPQA-Diamond, +3.1 HumanEval |
 | **Kimi Delta Attention** | Linear attention with per-dimension independent forget gates | 6x decode speed, -75% KV cache, 3.98x throughput |
 
 Both are drop-in replacements for standard Transformer layers.
@@ -73,8 +68,10 @@ pip install -e ".[dev,flash,train]"
 - **Python**: 3.9 – 3.12
 - **PyTorch**: 2.0+
 - **CUDA**: 11.8+ (optional, for FLA kernel acceleration)
-- **GPU Memory (1B model)**: ~4 GB (FP32), ~2 GB (FP16)
-- **GPU Memory (7B model)**: ~28 GB (FP32), ~14 GB (FP16)
+- **GPU Memory (1B model, params only)**: ~4 GB (FP32), ~2 GB (FP16); ~8 GB (FP16 with KV cache @ 32K context)
+- **GPU Memory (7B model, params only)**: ~28 GB (FP32), ~14 GB (FP16); ~40 GB (FP16 with KV cache @ 128K context)
+
+> ⚠️ Values are **parameter-only estimates**. Real-world usage adds KV cache (significant at long context), activations, and optimizer states (+2× params for Adam). For 7B @ 128K with standard MHA, KV cache alone can exceed 30 GB in FP16.
 
 ---
 
@@ -83,7 +80,7 @@ pip install -e ".[dev,flash,train]"
 ```python
 from kimi_attention import KimiTransformer, KimiConfig
 
-# Load official preset (1B, 7B, 48B)
+# Load preset (1B, 7B, 48B — see Presets section for details)
 config = KimiConfig.from_size("7B")
 
 # Or define custom
@@ -134,7 +131,7 @@ for layer_idx in range(num_layers):
 | `kda_every` | Ratio | Use case |
 |-------------|-------|----------|
 | 4 (default) | 3:1 KDA:MHA | Best speed/accuracy tradeoff |
-| 0 | All KDA | Maximum efficiency |
+| `None` | All KDA | Maximum efficiency |
 | 1 | All MHA | Standard Transformer |
 
 ### More Examples
@@ -159,11 +156,13 @@ model = KimiTransformer(config)
 
 ## Presets
 
-| Model | Layers | Dim | Heads | Vocab | Max Context | Params |
-|-------|--------|-----|-------|-------|-------------|--------|
-| **1B** | 24 | 2048 | 8 | 32K | 32K | ~1B |
-| **7B** | 32 | 4096 | 32 | 64K | 128K | ~7B |
-| **48B** | 64 | 8192 | 64 | 128K | 1M | ~48B |
+| Model | Layers | Dim | Heads | Vocab | Max Context | Architecture | Params |
+|-------|--------|-----|-------|-------|-------------|-------------|--------|
+| **1B**† | 24 | 2048 | 8 | 32K | 32K | Dense | ~1B |
+| **7B**† | 32 | 4096 | 32 | 64K | 128K | Dense | ~7B |
+| **48B** | 64 | 8192 | 64 | 128K | 1M | **MoE** (256 experts, 8 active + 1 shared) | ~48B total / ~3B active |
+
+> † The 1B and 7B presets are **unofficial configurations** derived by this repository from the paper descriptions. Moonshot AI has only released the [48B MoE model](https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Base) officially.
 
 ---
 
@@ -207,7 +206,8 @@ kimi-attention/
 │   │   ├── rmsnorm.py
 │   │   ├── rope.py
 │   │   └── moe.py
-│   └── configs/          # Official presets
+│   ├── configs/          # Official presets
+│   └── utils/            # Logging utilities
 ├── tests/                # 148 tests
 ├── scripts/              # Training & inference
 └── examples/             # Integration examples
@@ -219,11 +219,14 @@ kimi-attention/
 
 ```bash
 # Format
-black kimi_attention/
-isort kimi_attention/
+black kimi_attention/ tests/ scripts/ examples/
+isort kimi_attention/ tests/ scripts/ examples/
+
+# Lint
+flake8 kimi_attention/ tests/ scripts/ examples/ --max-line-length=100
 
 # Type check
-mypy kimi_attention/
+mypy kimi_attention/ --ignore-missing-imports
 
 # Tests
 pytest tests/ -v
@@ -234,16 +237,18 @@ pytest tests/ -v
 ## Citation
 
 ```bibtex
-@article{moonshot2025attnres,
-  title={Attention Residuals for Deep Transformer Networks},
-  author={Moonshot AI},
-  journal={arXiv preprint arXiv:2603.15031},
-  year={2025}
+@misc{moonshot2026attnres,
+  title={Attention Residuals},
+  author={Kimi Team},
+  year={2026},
+  eprint={2603.15031},
+  archivePrefix={arXiv},
+  primaryClass={cs.CL}
 }
 
 @article{moonshot2025kimilinear,
-  title={Kimi Linear: Scaling Linear Attention to 48 Billion Parameters},
-  author={Moonshot AI},
+  title={Kimi Linear: An Expressive, Efficient Attention Architecture},
+  author={Kimi Team},
   journal={arXiv preprint arXiv:2510.26692},
   year={2025}
 }

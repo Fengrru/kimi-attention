@@ -61,8 +61,9 @@ class KimiConfig:
         max_seq_len: Maximum sequence length for position embeddings.
             Default: 4096.
         layers_per_block: Layers per AttnRes block. Default: 4.
-        kda_every: Insert standard attention every N layers (0 = always
-            KDA). Default: 4 (3:1 KDA:MHA ratio).
+        kda_every: Insert standard (MHA) attention every N layers.
+            ``None`` = all KDA (no MHA layers).
+            Default: 4 (3:1 KDA:MHA ratio).
         chunk_size: FLA kernel chunk size. Default: 64.
         eps: RMSNorm numerical stability constant. Default: 1e-6.
         dropout: Dropout rate. Default: 0.0.
@@ -78,7 +79,7 @@ class KimiConfig:
     vocab_size: int = 32000
     max_seq_len: int = 4096
     layers_per_block: int = 4
-    kda_every: int = 4
+    kda_every: Optional[int] = 4
     chunk_size: int = 64
     eps: float = 1e-6
     dropout: float = 0.0
@@ -509,7 +510,7 @@ class KimiTransformer(nn.Module):
         # Transformer layers with hybrid KDA/MHA configuration
         self.layers = nn.ModuleList()
         for i in range(config.num_layers):
-            use_kda = config.kda_every <= 0 or (i % config.kda_every) != config.kda_every - 1
+            use_kda = config.kda_every is None or (i % config.kda_every) != config.kda_every - 1
             self.layers.append(
                 TransformerBlock(config, layer_idx=i, use_kda=use_kda, rope=self.rope)
             )

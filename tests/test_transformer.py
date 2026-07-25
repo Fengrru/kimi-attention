@@ -194,16 +194,16 @@ class TestKimiTransformer:
         assert mha_count == 2
 
     def test_all_kda(self, small_config):
-        """With kda_every=0, all layers should use KDA."""
+        """With kda_every=None, all layers should use KDA."""
         config = small_config
-        config.kda_every = 0
+        config.kda_every = None
         model = KimiTransformer(config)
 
         for layer in model.layers:
             assert layer.use_kda
 
     def test_all_mha(self, small_config):
-        """With kda_every=1, alternate layers should use KDA."""
+        """With kda_every=1, all layers should use MHA."""
         config = small_config
         config.kda_every = 1
         model = KimiTransformer(config)
@@ -222,7 +222,7 @@ class TestKimiTransformer:
             num_kv_heads=2,
             vocab_size=1000,
             max_seq_len=64,
-            kda_every=0,
+            kda_every=None,
             layers_per_block=2,
         )
         model = KimiTransformer(config)
@@ -239,7 +239,7 @@ class TestKimiTransformer:
             num_heads=4,
             vocab_size=500,
             max_seq_len=32,
-            kda_every=0,
+            kda_every=None,
             layers_per_block=2,
             num_experts=4,
             num_experts_per_tok=2,
@@ -269,7 +269,7 @@ class TestKimiTransformer:
             vocab_size=500,
             max_seq_len=64,
             rope_theta=10000.0,
-            kda_every=0,
+            kda_every=None,
             layers_per_block=2,
         )
         model = KimiTransformer(config)
@@ -285,7 +285,7 @@ class TestKimiTransformer:
             num_heads=4,
             vocab_size=200,
             max_seq_len=32,
-            kda_every=0,
+            kda_every=None,
             layers_per_block=2,
         )
         model = KimiTransformer(config)

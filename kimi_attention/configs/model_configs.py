@@ -76,11 +76,17 @@ KIMI_LINEAR_48B_CONFIG = KimiConfig(
     dropout=0.0,
     tie_weights=True,
     rope_theta=1000000.0,
-    num_experts=8,
+    num_experts=8,  # simplified: official has 256 experts (8 active + 1 shared)
     num_experts_per_tok=2,
 )
-"""Kimi-Linear 48B parameter configuration (official).
+"""Kimi-Linear 48B parameter configuration (simplified).
 
 Full-scale model as described in the Kimi Linear paper.
 Supports 1M context length with 3.98x throughput improvement.
+
+.. note::
+    The official Kimi Linear 48B uses a MoE architecture with **256 experts**
+    (8 active + 1 shared), totaling 48B parameters with ~3B activated per token.
+    This preset uses a reduced 8‑expert configuration for tractable local runs;
+    set ``num_experts=256`` for the full architecture.
 """

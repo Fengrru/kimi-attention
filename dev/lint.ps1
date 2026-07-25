@@ -10,7 +10,7 @@ isort --check-only --diff kimi_attention/ tests/ scripts/ examples/
 if ($LASTEXITCODE -ne 0) { Write-Host "isort failed!" -ForegroundColor Red }
 
 Write-Host "`n=== flake8 (linting) ===" -ForegroundColor Cyan
-flake8 kimi_attention/ tests/ scripts/ examples/ --count --show-source --statistics
+flake8 kimi_attention/ tests/ scripts/ examples/ --max-line-length=100 --count --show-source --statistics
 if ($LASTEXITCODE -ne 0) { Write-Host "flake8 failed!" -ForegroundColor Red }
 
 Write-Host "`n=== mypy (type checking) ===" -ForegroundColor Cyan

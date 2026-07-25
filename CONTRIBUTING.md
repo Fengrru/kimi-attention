@@ -37,16 +37,16 @@ pytest tests/ --cov=kimi_attention --cov-report=html
 
 We use the following tools to maintain code quality:
 
-- **Black**: Code formatting (`black kimi_attention/ tests/`)
-- **isort**: Import sorting (`isort kimi_attention/ tests/`)
-- **flake8**: Linting (`flake8 kimi_attention/ tests/`)
-- **mypy**: Type checking (`mypy kimi_attention/`)
+- **Black**: Code formatting (`black kimi_attention/ tests/ scripts/ examples/`)
+- **isort**: Import sorting (`isort kimi_attention/ tests/ scripts/ examples/`)
+- **flake8**: Linting (`flake8 kimi_attention/ tests/ scripts/ examples/ --max-line-length=100`)
+- **mypy**: Type checking (`mypy kimi_attention/ --ignore-missing-imports`)
 
 All checks must pass before a PR can be merged.
 
 ## Pull Request Process
 
-1. **Fork and branch**: Create a feature branch from `master`
+1. **Fork and branch**: Create a feature branch from `main`
 2. **Write tests**: Add tests for new functionality
 3. **Pass checks**: Ensure all style and test checks pass
 4. **Update docs**: Update README.md if adding new features

@@ -12,7 +12,6 @@ Usage::
 """
 
 import argparse
-import sys
 import time
 from collections import defaultdict
 
@@ -47,7 +46,7 @@ def exp1_kda_vs_mha():
     sep("Experiment 1: KDA vs MHA Speed vs Sequence Length")
 
     configs = {
-        "KDA (all)": dict(kda_every=0),
+        "KDA (all)": dict(kda_every=None),
         "3:1 Hybrid": dict(kda_every=4),
         "MHA (all)": dict(kda_every=1),
     }
@@ -110,7 +109,7 @@ def exp1_kda_vs_mha():
         print()
 
     # Speedup vs MHA
-    print(f"\n  Speedup vs all-MHA:")
+    print("\n  Speedup vs all-MHA:")
     print(f"  {'Seq Len':>8s}", end="")
     for name in ["KDA (all)", "3:1 Hybrid"]:
         print(f"  {name:>18s}", end="")
@@ -243,7 +242,7 @@ def exp3_gqa_compression():
             num_kv_heads=kv_heads,
             vocab_size=2000,
             max_seq_len=seq_len + gen_tokens,
-            kda_every=0,  # all MHA so we can measure pure KV cache effect
+            kda_every=1,  # all MHA so we can measure pure KV cache effect
             layers_per_block=2,
         )
         model = KimiTransformer(config)
@@ -323,12 +322,12 @@ def main():
     print(f"\n{'='*60}")
     print("  All experiments complete.")
     print(f"{'='*60}")
-    print(f"\n  Notes:")
-    print(f"  • KDA speed: pure-PyTorch fallback on CPU is slow; expect 3-6x")
-    print(f"    speedup on GPU with FLA CUDA kernels at >8K context.")
-    print(f"  • MHA appears faster here because F.scaled_dot_product_attention")
-    print(f"    uses optimized CPU kernels; KDA uses a chunked scan in pure Python.")
-    print(f"  • Rerun with --device cuda and pip install fla-core for realistic numbers.")
+    print("\n  Notes:")
+    print("  • KDA speed: pure-PyTorch fallback on CPU is slow; expect 3-6x")
+    print("    speedup on GPU with FLA CUDA kernels at >8K context.")
+    print("  • MHA appears faster here because F.scaled_dot_product_attention")
+    print("    uses optimized CPU kernels; KDA uses a chunked scan in pure Python.")
+    print("  • Rerun with --device cuda and pip install fla-core for realistic numbers.")
     print()
 
 
