@@ -122,18 +122,31 @@ class KimiConfig:
         """
         presets = {
             "1B": dict(
-                dim=2048, num_layers=24, num_heads=8,
-                vocab_size=32000, max_seq_len=32768,
+                dim=2048,
+                num_layers=24,
+                num_heads=8,
+                vocab_size=32000,
+                max_seq_len=32768,
             ),
             "7B": dict(
-                dim=4096, num_layers=32, num_heads=32,
-                num_kv_heads=8, vocab_size=64000, max_seq_len=131072,
+                dim=4096,
+                num_layers=32,
+                num_heads=32,
+                num_kv_heads=8,
+                vocab_size=64000,
+                max_seq_len=131072,
                 rope_theta=500000.0,
             ),
             "48B": dict(
-                dim=8192, num_layers=64, num_heads=64,
-                num_kv_heads=8, vocab_size=128000, max_seq_len=1048576,
-                rope_theta=1000000.0, num_experts=8, num_experts_per_tok=2,
+                dim=8192,
+                num_layers=64,
+                num_heads=64,
+                num_kv_heads=8,
+                vocab_size=128000,
+                max_seq_len=1048576,
+                rope_theta=1000000.0,
+                num_experts=8,
+                num_experts_per_tok=2,
             ),
         }
         if size not in presets:
@@ -373,21 +386,9 @@ class TransformerBlock(nn.Module):
             if positions is None:
                 positions = torch.arange(T, device=x.device).unsqueeze(0).expand(B, -1)
 
-            q = (
-                self.q_proj(normed)
-                .view(B, T, self.num_heads, self.head_dim)
-                .transpose(1, 2)
-            )
-            k = (
-                self.k_proj(normed)
-                .view(B, T, self.num_kv_heads, self.kv_head_dim)
-                .transpose(1, 2)
-            )
-            v = (
-                self.v_proj(normed)
-                .view(B, T, self.num_kv_heads, self.kv_head_dim)
-                .transpose(1, 2)
-            )
+            q = self.q_proj(normed).view(B, T, self.num_heads, self.head_dim).transpose(1, 2)
+            k = self.k_proj(normed).view(B, T, self.num_kv_heads, self.kv_head_dim).transpose(1, 2)
+            v = self.v_proj(normed).view(B, T, self.num_kv_heads, self.kv_head_dim).transpose(1, 2)
 
             q, k = self._apply_rope(q, k, positions)
 
@@ -429,11 +430,7 @@ class TransformerBlock(nn.Module):
     def get_kv_cache_state(self) -> dict:
         """Clone MHA KV cache for beam‑search snapshotting."""
         state: dict = {}
-        if (
-            not self.use_kda
-            and hasattr(self, "_kv_cache")
-            and self._kv_cache is not None
-        ):
+        if not self.use_kda and hasattr(self, "_kv_cache") and self._kv_cache is not None:
             state = {k: v.clone() for k, v in self._kv_cache.items()}
         return state
 
@@ -488,9 +485,7 @@ class KimiTransformer(nn.Module):
 
         # Embeddings
         self.token_emb = nn.Embedding(config.vocab_size, config.dim)
-        self.dropout = (
-            nn.Dropout(config.dropout) if config.dropout > 0 else nn.Identity()
-        )
+        self.dropout = nn.Dropout(config.dropout) if config.dropout > 0 else nn.Identity()
 
         # Attention Residuals
         self.attn_res = BlockAttentionResiduals(
@@ -502,13 +497,9 @@ class KimiTransformer(nn.Module):
         # Transformer layers with hybrid KDA/MHA configuration
         self.layers = nn.ModuleList()
         for i in range(config.num_layers):
-            use_kda = (
-                config.kda_every <= 0 or (i % config.kda_every) != config.kda_every - 1
-            )
+            use_kda = config.kda_every <= 0 or (i % config.kda_every) != config.kda_every - 1
             self.layers.append(
-                TransformerBlock(
-                    config, layer_idx=i, use_kda=use_kda, rope=self.rope
-                )
+                TransformerBlock(config, layer_idx=i, use_kda=use_kda, rope=self.rope)
             )
 
         # Output
@@ -550,8 +541,7 @@ class KimiTransformer(nn.Module):
         B, T = input_ids.shape
         if T > self.config.max_seq_len:
             raise ValueError(
-                f"Sequence length {T} exceeds max_seq_len "
-                f"{self.config.max_seq_len}"
+                f"Sequence length {T} exceeds max_seq_len " f"{self.config.max_seq_len}"
             )
 
         positions = torch.arange(T, device=input_ids.device).unsqueeze(0).expand(B, -1)
@@ -569,6 +559,7 @@ class KimiTransformer(nn.Module):
         hidden = x
 
         for layer_idx, layer in enumerate(self.layers):
+
             def make_attn_fn(lyr: TransformerBlock):
                 if lyr.use_kda:
                     # h is already normalized by attn_res.forward()
@@ -670,8 +661,8 @@ class KimiTransformer(nn.Module):
 
         # ── Expand to num_beams ───────────────────────────────────
         top_scores, top_tokens = torch.topk(first_logits[0], num_beams)
-        beam_scores = top_scores.clone()            # [B] raw log‑prob sum
-        beam_tokens = top_tokens                    # [B]
+        beam_scores = top_scores.clone()  # [B] raw log‑prob sum
+        beam_tokens = top_tokens  # [B]
 
         # Each beam holds its own list-of-tensors sequence (not padded)
         beam_seqs: List[torch.Tensor] = [
@@ -688,8 +679,8 @@ class KimiTransformer(nn.Module):
             self._restore_layer_caches(prompt_cache)
             beam_caches.append(self._snapshot_layer_caches())
             # Incremental: forward only the beam's first new token
-            tok = beam_tokens[i : i + 1].unsqueeze(0)          # [1, 1]
-            pos = torch.tensor([[T]], device=device)           # position = prompt length
+            tok = beam_tokens[i : i + 1].unsqueeze(0)  # [1, 1]
+            pos = torch.tensor([[T]], device=device)  # position = prompt length
             h = self.token_emb(tok)
             h = self.dropout(h)
             for layer in self.layers:
@@ -703,18 +694,17 @@ class KimiTransformer(nn.Module):
             all_logits: List[torch.Tensor] = []
             for i in range(num_beams):
                 if beam_done[i]:
-                    all_logits.append(
-                        torch.full((Vocab,), float("-inf"), device=device)
-                    )
+                    all_logits.append(torch.full((Vocab,), float("-inf"), device=device))
                     continue
 
                 self.clear_caches()
                 self._restore_layer_caches(beam_caches[i])
 
                 # Single‑token incremental forward
-                last_tok = beam_seqs[i][-1:].unsqueeze(0)          # [1, 1]
+                last_tok = beam_seqs[i][-1:].unsqueeze(0)  # [1, 1]
                 pos = torch.tensor(
-                    [[beam_seqs[i].size(0) - 1]], device=device,
+                    [[beam_seqs[i].size(0) - 1]],
+                    device=device,
                 )
                 h = self.token_emb(last_tok)
                 h = self.dropout(h)
@@ -762,7 +752,8 @@ class KimiTransformer(nn.Module):
                     self._restore_layer_caches(beam_caches[p])
                     tok = torch.tensor([[t]], device=device)
                     pos = torch.tensor(
-                        [[beam_seqs[p].size(0)]], device=device,
+                        [[beam_seqs[p].size(0)]],
+                        device=device,
                     )
                     h = self.token_emb(tok)
                     h = self.dropout(h)
@@ -770,14 +761,9 @@ class KimiTransformer(nn.Module):
                         h = layer.forward(h, use_cache=True, positions=pos)
                     c = self._snapshot_layer_caches()
 
-                new_seqs.append(
-                    torch.cat([beam_seqs[p], torch.tensor([t], device=device)])
-                )
+                new_seqs.append(torch.cat([beam_seqs[p], torch.tensor([t], device=device)]))
                 new_scores.append(top_scores[rank])
-                new_done.append(
-                    beam_done[p]
-                    or (eos_token_id is not None and t == eos_token_id)
-                )
+                new_done.append(beam_done[p] or (eos_token_id is not None and t == eos_token_id))
                 new_caches.append(c)
 
             beam_seqs = new_seqs
@@ -788,9 +774,11 @@ class KimiTransformer(nn.Module):
         # ── Final selection (length penalty applied ONCE) ─────────
         if length_penalty != 1.0:
             lengths = torch.tensor(
-                [s.size(0) for s in beam_seqs], device=device, dtype=torch.float32,
+                [s.size(0) for s in beam_seqs],
+                device=device,
+                dtype=torch.float32,
             )
-            final_scores = beam_scores / (lengths ** length_penalty)
+            final_scores = beam_scores / (lengths**length_penalty)
         else:
             final_scores = beam_scores
 
@@ -864,6 +852,7 @@ class KimiTransformer(nn.Module):
         hidden = x
 
         for layer_idx, layer in enumerate(self.layers):
+
             def make_attn_fn(lyr: TransformerBlock):
                 if lyr.use_kda:
                     # KDA handles its own RoPE via the ``rope`` module
@@ -906,13 +895,12 @@ class KimiTransformer(nn.Module):
             hidden = x
 
             for layer_idx, layer in enumerate(self.layers):
+
                 def make_attn_fn_step(lyr: TransformerBlock):
                     if lyr.use_kda:
                         return lambda h: lyr.attn(h, positions=pos_tensor)
                     else:
-                        return lambda h: lyr.attn_incremental(
-                            h, normed=True, positions=pos_tensor
-                        )
+                        return lambda h: lyr.attn_incremental(h, normed=True, positions=pos_tensor)
 
                 def make_mlp_fn_step(lyr: TransformerBlock):
                     return lambda h: lyr.mlp_forward(h, normed=True)
@@ -958,18 +946,11 @@ class KimiTransformer(nn.Module):
             * num_mha_layers
             * 4
         )
-        activation_bytes = (
-            batch_size
-            * seq_len
-            * self.config.dim
-            * self.config.num_layers
-            * 4
-        )
+        activation_bytes = batch_size * seq_len * self.config.dim * self.config.num_layers * 4
 
         return {
-            "parameters_mb": param_bytes / (1024 ** 2),
-            "kv_cache_mb": kv_cache_bytes / (1024 ** 2),
-            "activations_mb": activation_bytes / (1024 ** 2),
-            "total_mb": (param_bytes + kv_cache_bytes + activation_bytes)
-            / (1024 ** 2),
+            "parameters_mb": param_bytes / (1024**2),
+            "kv_cache_mb": kv_cache_bytes / (1024**2),
+            "activations_mb": activation_bytes / (1024**2),
+            "total_mb": (param_bytes + kv_cache_bytes + activation_bytes) / (1024**2),
         }

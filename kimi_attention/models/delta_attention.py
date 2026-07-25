@@ -36,7 +36,7 @@ Reference:
     Moonshot AI (2025). Kimi Linear: Scaling Linear Attention to 48
 Billion
     Parameters. arXiv:2510.26692.
-    
+
     Flash Linear Attention (FLA): https://github.com/fla-org/flash-
 linear-attention
 """
@@ -238,24 +238,22 @@ class KimiDeltaAttention(nn.Module):
     ) -> torch.Tensor:
         """Execute KDA forward pass.
 
-        Args:
-            q: Query tensor ``[B, H, T, D]``.
-            k: Key tensor ``[B, H, T, D]``.
-            v: Value tensor ``[B, H, T, D]``.
-            beta: Raw forget gate logits ``[B, H, T, D]``. Will be
-                sigmoid-activated internally.
-            g: Output gate ``[B, H, T, D]``. Should be pre-activated
-(typically
-                with SiLU) before passing to this function.
+                Args:
+                    q: Query tensor ``[B, H, T, D]``.
+                    k: Key tensor ``[B, H, T, D]``.
+                    v: Value tensor ``[B, H, T, D]``.
+                    beta: Raw forget gate logits ``[B, H, T, D]``. Will be
+                        sigmoid-activated internally.
+                    g: Output gate ``[B, H, T, D]``. Should be pre-activated
+        (typically
+                        with SiLU) before passing to this function.
 
-        Returns:
-            Attention output ``[B, H, T, D]``.
+                Returns:
+                    Attention output ``[B, H, T, D]``.
         """
         if self._try_import_fla() and q.is_cuda:
             beta_sig = torch.sigmoid(beta)
-            return self._chunk_kda(
-                q, k, v, beta_sig, g, chunk_size=self.chunk_size
-            )
+            return self._chunk_kda(q, k, v, beta_sig, g, chunk_size=self.chunk_size)
         else:
             if not q.is_cuda and self._try_import_fla():
                 warnings.warn(
@@ -269,30 +267,30 @@ class KimiDeltaAttention(nn.Module):
 
 class KimiDeltaAttentionLayer(nn.Module):
     """Complete KDA attention layer (drop-in replacement for standard
- attention).
+    attention).
 
-    This module combines all necessary projections, normalization, and the
-    KDA computation into a single layer that can directly replace
-    ``nn.MultiheadAttention`` in any Transformer architecture.
+       This module combines all necessary projections, normalization, and the
+       KDA computation into a single layer that can directly replace
+       ``nn.MultiheadAttention`` in any Transformer architecture.
 
-    Args:
-        dim: Model dimension (d_model). Must be divisible by num_heads.
-        num_heads: Number of attention heads. Default: 8.
-        chunk_size: Chunk size for FLA kernel. Default: 64.
-        eps: RMSNorm stability constant. Default: 1e-6.
-        rope: Optional RotaryEmbedding module for positional encoding.
+       Args:
+           dim: Model dimension (d_model). Must be divisible by num_heads.
+           num_heads: Number of attention heads. Default: 8.
+           chunk_size: Chunk size for FLA kernel. Default: 64.
+           eps: RMSNorm stability constant. Default: 1e-6.
+           rope: Optional RotaryEmbedding module for positional encoding.
 
-    Attributes:
-        q_proj, k_proj, v_proj: Input projections for Q, K, V.
-        beta_proj: Projects input to forget gate logits.
-        g_proj: Projects input to output gate (followed by SiLU).
-        o_proj: Output projection.
+       Attributes:
+           q_proj, k_proj, v_proj: Input projections for Q, K, V.
+           beta_proj: Projects input to forget gate logits.
+           g_proj: Projects input to output gate (followed by SiLU).
+           o_proj: Output projection.
 
-    Example::
-        >>> layer = KimiDeltaAttentionLayer(dim=512, num_heads=8)
-        >>> x = torch.randn(2, 128, 512)
-        >>> out = layer(x)
-        >>> assert out.shape == (2, 128, 512)
+       Example::
+           >>> layer = KimiDeltaAttentionLayer(dim=512, num_heads=8)
+           >>> x = torch.randn(2, 128, 512)
+           >>> out = layer(x)
+           >>> assert out.shape == (2, 128, 512)
     """
 
     def __init__(
@@ -305,9 +303,7 @@ class KimiDeltaAttentionLayer(nn.Module):
     ) -> None:
         super().__init__()
         if dim % num_heads != 0:
-            raise ValueError(
-                f"dim ({dim}) must be divisible by num_heads ({num_heads})"
-            )
+            raise ValueError(f"dim ({dim}) must be divisible by num_heads ({num_heads})")
         self.dim = dim
         self.num_heads = num_heads
         self.head_dim = dim // num_heads
@@ -328,11 +324,11 @@ class KimiDeltaAttentionLayer(nn.Module):
     def _reset_parameters(self) -> None:
         """Initialize parameters for stable training.
 
-        Q/K/V/O projections use Xavier uniform initialization.
-        Beta projection uses small normal init (sigmoid -> ~0.5 forget
- rate).
-        All projections are marked with ``_custom_init`` to prevent
-        ``KimiTransformer._init_weights`` from overwriting them.
+               Q/K/V/O projections use Xavier uniform initialization.
+               Beta projection uses small normal init (sigmoid -> ~0.5 forget
+        rate).
+               All projections are marked with ``_custom_init`` to prevent
+               ``KimiTransformer._init_weights`` from overwriting them.
         """
         for m in (self.q_proj, self.k_proj, self.v_proj, self.o_proj):
             nn.init.xavier_uniform_(m.weight)
@@ -363,38 +359,18 @@ class KimiDeltaAttentionLayer(nn.Module):
         B, T, D = x.shape
 
         # Project and reshape to multi-head format
-        q = (
-            self.q_proj(x)
-            .view(B, T, self.num_heads, self.head_dim)
-            .transpose(1, 2)
-        )
-        k = (
-            self.k_proj(x)
-            .view(B, T, self.num_heads, self.head_dim)
-            .transpose(1, 2)
-        )
-        v = (
-            self.v_proj(x)
-            .view(B, T, self.num_heads, self.head_dim)
-            .transpose(1, 2)
-        )
+        q = self.q_proj(x).view(B, T, self.num_heads, self.head_dim).transpose(1, 2)
+        k = self.k_proj(x).view(B, T, self.num_heads, self.head_dim).transpose(1, 2)
+        v = self.v_proj(x).view(B, T, self.num_heads, self.head_dim).transpose(1, 2)
 
         # Apply RoPE to Q and K
         if self.rope is not None and positions is not None:
             q = self.rope(q, positions)
             k = self.rope(k, positions)
 
-        beta = (
-            self.beta_proj(x)
-            .view(B, T, self.num_heads, self.head_dim)
-            .transpose(1, 2)
-        )
+        beta = self.beta_proj(x).view(B, T, self.num_heads, self.head_dim).transpose(1, 2)
         # Output gate with SiLU activation
-        g = (
-            F.silu(self.g_proj(x))
-            .view(B, T, self.num_heads, self.head_dim)
-            .transpose(1, 2)
-        )
+        g = F.silu(self.g_proj(x)).view(B, T, self.num_heads, self.head_dim).transpose(1, 2)
 
         # KDA computation
         attn_out = self.kda(q, k, v, beta, g)

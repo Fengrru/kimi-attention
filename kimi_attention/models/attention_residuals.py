@@ -53,36 +53,36 @@ from kimi_attention.models.rmsnorm import RMSNorm
 class BlockAttentionResiduals(nn.Module):
     """Block Attention Residuals (AttnRes) for deep Transformers.
 
-    This module implements depth-wise attention aggregation that can be
-drop-in
-    inserted into any existing Transformer architecture with zero modifications
-to
-    the underlying attention or FFN sublayers.
+        This module implements depth-wise attention aggregation that can be
+    drop-in
+        inserted into any existing Transformer architecture with zero modifications
+    to
+        the underlying attention or FFN sublayers.
 
-    Args:
-        dim: Model hidden dimension (``d_model``).
-        layers_per_block: Number of Transformer layers per block. Within a
-            block, standard residuals are used. Between blocks, attention
-            residuals aggregate all preceding block outputs. Default: 4.
-        eps: Numerical stability constant for RMSNorm. Default: 1e-6.
+        Args:
+            dim: Model hidden dimension (``d_model``).
+            layers_per_block: Number of Transformer layers per block. Within a
+                block, standard residuals are used. Between blocks, attention
+                residuals aggregate all preceding block outputs. Default: 4.
+            eps: Numerical stability constant for RMSNorm. Default: 1e-6.
 
-    Attributes:
-        attn_res_proj: Pseudo-query projection for attention residual path.
-        mlp_res_proj: Pseudo-query projection for FFN residual path.
+        Attributes:
+            attn_res_proj: Pseudo-query projection for attention residual path.
+            mlp_res_proj: Pseudo-query projection for FFN residual path.
 
-    Example::
-        >>> attn_res = BlockAttentionResiduals(dim=512, layers_per_block=4)
-        >>> blocks, hidden = [], torch.randn(2, 16, 512)
-        >>> for idx in range(8):
-        ...     blocks, hidden = attn_res(
-        ...         blocks=blocks,
-        ...         hidden_states=hidden,
-        ...         layer_number=idx,
-        ...         attn_fn=lambda x: x * 0.1,
-        ...         mlp_fn=lambda x: x * 0.1,
-        ...         attn_norm=RMSNorm(512),
-        ...         mlp_norm=RMSNorm(512),
-        ...     )
+        Example::
+            >>> attn_res = BlockAttentionResiduals(dim=512, layers_per_block=4)
+            >>> blocks, hidden = [], torch.randn(2, 16, 512)
+            >>> for idx in range(8):
+            ...     blocks, hidden = attn_res(
+            ...         blocks=blocks,
+            ...         hidden_states=hidden,
+            ...         layer_number=idx,
+            ...         attn_fn=lambda x: x * 0.1,
+            ...         mlp_fn=lambda x: x * 0.1,
+            ...         attn_norm=RMSNorm(512),
+            ...         mlp_norm=RMSNorm(512),
+            ...     )
     """
 
     def __init__(
@@ -121,26 +121,26 @@ to
     ) -> torch.Tensor:
         """Core attention residual aggregation.
 
-        Computes a weighted sum of all previous block outputs plus the
- current
-        layer's input, where weights are determined by a pseudo-query
- attention
-        mechanism over the depth dimension.
+               Computes a weighted sum of all previous block outputs plus the
+        current
+               layer's input, where weights are determined by a pseudo-query
+        attention
+               mechanism over the depth dimension.
 
-        Args:
-            blocks: List of completed block outputs, each ``[B, T, D]``.
-            current: Current layer's input, ``[B, T, D]``.
-            proj: Pseudo-query projection layer.
-            norm: RMSNorm applied before computing attention scores.
+               Args:
+                   blocks: List of completed block outputs, each ``[B, T, D]``.
+                   current: Current layer's input, ``[B, T, D]``.
+                   proj: Pseudo-query projection layer.
+                   norm: RMSNorm applied before computing attention scores.
 
-        Returns:
-            Aggregated hidden state of shape ``[B, T, D]``.
+               Returns:
+                   Aggregated hidden state of shape ``[B, T, D]``.
 
-        Note:
-            When ``blocks`` is empty, this degenerates to the identity
- function
-            (returns ``current`` unchanged), ensuring correct behavior at
- layer 0.
+               Note:
+                   When ``blocks`` is empty, this degenerates to the identity
+        function
+                   (returns ``current`` unchanged), ensuring correct behavior at
+        layer 0.
         """
         if not blocks:
             # Degenerate case: no previous blocks → identity mapping
@@ -226,9 +226,7 @@ to
         h = h_attn + attn_out
 
         if is_block_start and len(blocks) > 0:
-            h_mlp = self._attn_res_aggregate_step(
-                blocks, h, self.mlp_res_proj, self.mlp_res_norm
-            )
+            h_mlp = self._attn_res_aggregate_step(blocks, h, self.mlp_res_proj, self.mlp_res_norm)
         else:
             h_mlp = h
 
@@ -247,34 +245,34 @@ to
     ) -> Tuple[List[torch.Tensor], torch.Tensor]:
         """Execute one Transformer layer with integrated Attention Residuals.
 
-        This method wraps both the attention and FFN sublayers, applying
-        attention residuals at block boundaries while using standard
-residuals
-        within blocks.
+                This method wraps both the attention and FFN sublayers, applying
+                attention residuals at block boundaries while using standard
+        residuals
+                within blocks.
 
-        Args:
-            blocks: Global list of completed block outputs.
-            hidden_states: Current layer input ``[B, T, D]``.
-            layer_number: 0-based layer index.
-            attn_fn: Attention computation callable. Accepts normalized
-                input ``[B, T, D]`` and returns attention output ``[B, T,
-D]``.
-            mlp_fn: FFN computation callable. Accepts normalized input
-                ``[B, T, D]`` and returns FFN output ``[B, T, D]``.
-            attn_norm: Pre-attention RMSNorm layer.
-            mlp_norm: Pre-FFN RMSNorm layer.
+                Args:
+                    blocks: Global list of completed block outputs.
+                    hidden_states: Current layer input ``[B, T, D]``.
+                    layer_number: 0-based layer index.
+                    attn_fn: Attention computation callable. Accepts normalized
+                        input ``[B, T, D]`` and returns attention output ``[B, T,
+        D]``.
+                    mlp_fn: FFN computation callable. Accepts normalized input
+                        ``[B, T, D]`` and returns FFN output ``[B, T, D]``.
+                    attn_norm: Pre-attention RMSNorm layer.
+                    mlp_norm: Pre-FFN RMSNorm layer.
 
-        Returns:
-            Tuple of (updated_blocks, layer_output) where ``layer_output``
-            is ``[B, T, D]``.
+                Returns:
+                    Tuple of (updated_blocks, layer_output) where ``layer_output``
+                    is ``[B, T, D]``.
 
-        Note:
-            On block boundaries (every ``layers_per_block`` layers), this
-            module appends the current output to ``blocks`` after
-computation.
-            These stored block outputs are detached during training to
-prevent
-            gradient flow through historical layers.
+                Note:
+                    On block boundaries (every ``layers_per_block`` layers), this
+                    module appends the current output to ``blocks`` after
+        computation.
+                    These stored block outputs are detached during training to
+        prevent
+                    gradient flow through historical layers.
         """
         layer_in_block = layer_number % self.layers_per_block
         is_block_start = layer_in_block == 0
@@ -294,9 +292,7 @@ prevent
 
         # ---- 2. FFN sublayer ----
         if is_block_start and len(blocks) > 0:
-            h_mlp = self._attn_res_aggregate(
-                blocks, h, self.mlp_res_proj, self.mlp_res_norm
-            )
+            h_mlp = self._attn_res_aggregate(blocks, h, self.mlp_res_proj, self.mlp_res_norm)
         else:
             h_mlp = h
 

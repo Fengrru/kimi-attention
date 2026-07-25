@@ -56,9 +56,7 @@ class MoEFeedForward(nn.Module):
         self.top_k = top_k
 
         self.router = nn.Linear(dim, num_experts, bias=False)
-        self.experts = nn.ModuleList(
-            [_SwiGLUExpert(dim, hidden_dim) for _ in range(num_experts)]
-        )
+        self.experts = nn.ModuleList([_SwiGLUExpert(dim, hidden_dim) for _ in range(num_experts)])
 
     def forward(
         self,
@@ -80,9 +78,7 @@ class MoEFeedForward(nn.Module):
         router_logits = self.router(x_flat)  # [B*T, E]
         router_probs = F.softmax(router_logits, dim=-1)
 
-        top_k_weights, top_k_idx = torch.topk(
-            router_probs, self.top_k, dim=-1, sorted=False
-        )
+        top_k_weights, top_k_idx = torch.topk(router_probs, self.top_k, dim=-1, sorted=False)
         top_k_weights = top_k_weights / top_k_weights.sum(dim=-1, keepdim=True)
 
         out = torch.zeros_like(x_flat)

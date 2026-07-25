@@ -69,9 +69,7 @@ class RotaryEmbedding(nn.Module):
         self.max_seq_len = max_seq_len
         self.theta = theta
 
-        freqs = 1.0 / (
-            theta ** (torch.arange(0, dim, 2, dtype=torch.float32) / dim)
-        )
+        freqs = 1.0 / (theta ** (torch.arange(0, dim, 2, dtype=torch.float32) / dim))
         t = torch.arange(max_seq_len, dtype=torch.float32)
         freqs = torch.outer(t, freqs)  # [max_seq_len, dim // 2]
 
