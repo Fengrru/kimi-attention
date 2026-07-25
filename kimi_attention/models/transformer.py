@@ -242,7 +242,9 @@ class TransformerBlock(nn.Module):
             pass
         return self._flash_attn_fn is not None
 
-    def _attn_sdpa(self, q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, is_causal: bool = True) -> torch.Tensor:
+    def _attn_sdpa(
+        self, q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, is_causal: bool = True
+    ) -> torch.Tensor:
         """Attention dispatch: FlashAttn on CUDA else PyTorch SDPA."""
         if q.is_cuda and self._try_flash_attn():
             assert self._flash_attn_fn is not None, "FlashAttn not loaded"
@@ -290,7 +292,9 @@ class TransformerBlock(nn.Module):
         attn_out = attn_out.transpose(1, 2).contiguous().view(B, T, -1)
         return self.o_proj(attn_out)
 
-    def _apply_rope(self, q: torch.Tensor, k: torch.Tensor, positions: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    def _apply_rope(
+        self, q: torch.Tensor, k: torch.Tensor, positions: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """Apply RoPE if the module is configured."""
         if self.rope is None:
             return q, k
