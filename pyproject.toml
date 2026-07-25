@@ -1,0 +1,98 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kimi-attention"
+version = "1.0.0"
+description = "Production-grade PyTorch implementation of Kimi's Attention Residuals and Delta Attention"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+requires-python = ">=3.9"
+authors = [
+    {name = "Moonshot AI Research", email = "research@moonshot.cn"},
+]
+keywords = [
+    "deep-learning",
+    "transformer",
+    "attention-mechanism",
+    "moonshot-ai",
+    "kimi",
+    "linear-attention",
+    "delta-attention",
+    "attention-residuals",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "torch>=2.0.0",
+    "einops>=0.7.0",
+]
+
+[project.optional-dependencies]
+flash = [
+    "fla-core>=0.4.0",
+    "flash-attn>=2.0.0",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.0",
+    "black>=24.0",
+    "isort>=5.13",
+    "mypy>=1.8",
+    "flake8>=7.0",
+]
+train = [
+    "transformers>=4.40",
+    "datasets>=2.19",
+    "tokenizers>=0.19",
+    "wandb>=0.17",
+    "tqdm>=4.66",
+]
+all = [
+    "kimi-attention[flash,dev,train]",
+]
+
+[project.urls]
+Homepage = "https://github.com/Fengrru/kimi-attention"
+Documentation = "https://github.com/Fengrru/kimi-attention#readme"
+Repository = "https://github.com/Fengrru/kimi-attention"
+Issues = "https://github.com/Fengrru/kimi-attention/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["kimi_attention*"]
+
+[tool.black]
+line-length = 100
+target-version = ['py39', 'py310', 'py311', 'py312']
+
+[tool.isort]
+profile = "black"
+line_length = 100
+known_first_party = ["kimi_attention"]
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
