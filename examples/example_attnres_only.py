@@ -60,8 +60,13 @@ def main():
     hidden = x
 
     for layer_idx in range(num_layers):
-        attn_fn = lambda h, idx=layer_idx: attn_layers[idx](h)
-        mlp_fn = lambda h, idx=layer_idx: mlp_layers[idx](h)
+
+        def attn_fn(h, idx=layer_idx):
+            return attn_layers[idx](h)
+
+        def mlp_fn(h, idx=layer_idx):
+            return mlp_layers[idx](h)
+
         attn_norm, mlp_norm = norm_layers[layer_idx]
 
         blocks, hidden = attn_res(

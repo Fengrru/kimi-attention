@@ -128,7 +128,7 @@ def main():
 
     # Memory
     mem = model.estimate_memory(args.batch_size, args.seq_len)
-    print(f"\n  Memory (FP32 estimate):")
+    print("\n  Memory (FP32 estimate):")
     print(f"    Params:    {mem['parameters_mb']:.0f} MB")
     print(f"    KV Cache:  {mem['kv_cache_mb']:.0f} MB")
     print(f"    Total:     {mem['total_mb']:.0f} MB")
